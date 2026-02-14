@@ -30,3 +30,29 @@ export async function GET(
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
+
+// VULN [Cat 28]: IDOR - updates any patient record using just the MRN, no ownership check
+export async function PUT(
+  req: NextRequest,
+  { params }: { params: { mrn: string } }
+) {
+  try {
+    const body = await req.json();
+
+    // VULN [Cat 28]: No authentication or authorization check
+    // Any user can update any patient's record by knowing/guessing the MRN
+    const updated = await prisma.user.update({
+      where: { mrn: params.mrn },
+      data: {
+        name: body.name,
+        email: body.email,
+        phone: body.phone,
+      },
+    });
+
+    return NextResponse.json({ patient: updated });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}

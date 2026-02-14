@@ -1,12 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 
+// VULN [Cat 25]: N+1 query - fetches each patient individually in a loop
 export async function GET() {
   try {
-    const appointments = await prisma.appointment.findMany({
-      include: { patient: true, doctor: true },
-    });
-    return NextResponse.json({ appointments });
+    const appointments = await prisma.appointment.findMany();
+
+    // VULN [Cat 25]: N+1 query pattern - loops through results and queries individually
+    const enrichedAppointments = [];
+    for (const appointment of appointments) {
+      const patient = await prisma.user.findUnique({
+        where: { id: appointment.patientId },
+      });
+      const doctor = await prisma.user.findUnique({
+        where: { id: appointment.doctorId },
+      });
+      enrichedAppointments.push({ ...appointment, patient, doctor });
+    }
+
+    return NextResponse.json({ appointments: enrichedAppointments });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json({ error: message }, { status: 500 });
