@@ -5,32 +5,6 @@ A modern telehealth platform built with Next.js 14, Prisma, and Tailwind CSS.
 > **Warning:** This application is intentionally vulnerable and is designed as a
 > demonstration target for security auditing tools. **Do not deploy to production.**
 
-## Quick Start
-
-```bash
-# Install dependencies
-npm install
-
-# Set up the database
-npx prisma db push
-
-# Seed with demo data
-npm run db:seed
-
-# Start the development server
-npm run dev
-```
-
-Visit [http://localhost:3000](http://localhost:3000)
-
-## Demo Accounts
-
-| Role    | Email                   | Password  |
-|---------|-------------------------|-----------|
-| Admin   | admin@vibehealth.io     | admin123  |
-| Doctor  | dr.smith@vibehealth.io  | doctor123 |
-| Patient | patient@example.com     | patient123|
-
 ## Tech Stack
 
 - **Framework:** Next.js 14 (App Router)
